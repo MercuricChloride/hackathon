@@ -1,28 +1,33 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { YourContract } from "../typechain-types";
+import { Wizard, VRF, Registry } from "../typechain-types";
 
-describe("YourContract", function () {
+describe("Player Sheet", function () {
   // We define a fixture to reuse the same setup in every test.
 
-  let yourContract: YourContract;
+  let wizard: Wizard;
+  let vrf: VRF;
+  let registry: Registry;
+
   before(async () => {
-    const [owner] = await ethers.getSigners();
-    const yourContractFactory = await ethers.getContractFactory("YourContract");
-    yourContract = (await yourContractFactory.deploy(owner.address)) as YourContract;
-    await yourContract.deployed();
+    const wizardFactory = await ethers.getContractFactory("Wizard");
+    const vrfFactory = await ethers.getContractFactory("VRF");
+    const registryFactory = await ethers.getContractFactory("Registry");
+    vrf = (await vrfFactory.deploy()) as VRF;
+    registry = (await registryFactory.deploy()) as Registry;
+    wizard = (await wizardFactory.deploy("Wizard", "Wiz", registry.address, vrf.address)) as Wizard;
+    await wizard.deployed();
   });
 
   describe("Deployment", function () {
     it("Should have the right message on deploy", async function () {
-      expect(await yourContract.greeting()).to.equal("Building Unstoppable Apps!!!");
+      expect(await wizard.name()).to.equal("Wizard");
     });
 
-    it("Should allow setting a new message", async function () {
-      const newGreeting = "Learn scaffold-eth! :)";
-
-      await yourContract.setGreeting(newGreeting);
-      expect(await yourContract.greeting()).to.equal(newGreeting);
+    it("Should allow a use to mint", async function () {
+      const [owner] = await ethers.getSigners();
+      await wizard.mint();
+      expect(await wizard.balanceOf(owner.address)).to.equal(1);
     });
   });
 });
