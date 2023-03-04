@@ -9,16 +9,19 @@ describe("Dungeon Crawler", function () {
   let vrf: VRF;
   let registry: Registry;
   let barbarian: Barbarian;
+  //let gear: Gear;
 
   before(async () => {
     const wizardFactory = await ethers.getContractFactory("Wizard");
     const barbarianFactory = await ethers.getContractFactory("Barbarian");
     const vrfFactory = await ethers.getContractFactory("VRF");
     const registryFactory = await ethers.getContractFactory("Registry");
+    //const gearFactory = await ethers.getContractFactory("Gear");
     vrf = (await vrfFactory.deploy()) as VRF;
     registry = (await registryFactory.deploy()) as Registry;
     wizard = (await wizardFactory.deploy("Wizard", "Wiz", registry.address, vrf.address)) as Wizard;
     barbarian = (await barbarianFactory.deploy("Barbarian", "Barb", registry.address, vrf.address)) as Barbarian;
+    //gear = (await gearFactory.deploy("Gear", "GEAR", registry.address, vrf.address)) as Gear;
     await wizard.deployed();
   });
 
@@ -95,4 +98,21 @@ describe("Dungeon Crawler", function () {
       expect(barbStr).to.equal(barbDamage);
     });
   });
+
+  //describe("Gear", function () {
+  //  //should allow a user to create a lootbox
+  //  it("Should allow a user to create a piece of gear", async function () {
+  //    const [owner] = await ethers.getSigners();
+
+  //    const simpleModifer = {
+  //      stat: 1,
+  //      mod: 10,
+  //    };
+  //
+  //    const SimpleGear = {
+  //      slot: 1,
+  //      modifiers: [simpleModifer],
+  //    }
+  //  });
+  // });
 });

@@ -37,6 +37,13 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
     autoMine: true,
   });
 
+  const gear = await deploy("Gear", {
+    from: deployer,
+    log: true,
+    autoMine: true,
+    args: ["GEAR", "GEAR", _registry.address, vrf.address],
+  });
+
   const wizard = await deploy("Wizard", {
     from: deployer,
     log: true,
@@ -54,6 +61,7 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
   const registry = await hre.ethers.getContract("Registry", deployer);
   await registry.addContract(wizard.address, 2);
   await registry.addContract(barbarian.address, 2);
+  await registry.setGearContract(gear.address);
 
   // Get the deployed contract
   // const yourContract = await hre.ethers.getContract("YourContract", deployer);
