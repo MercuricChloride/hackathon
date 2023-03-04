@@ -80,7 +80,10 @@ contract Gear is ERC721 {
     string memory _symbol,
     address _registry,
     address _vrf)
-  ERC721(_name, _symbol){}
+  ERC721(_name, _symbol){
+    registry = Registry(_registry);
+    vrf = VRF(_vrf);
+  }
 
   function getGearModifiers(uint tokenId) public view returns(Modifier[] memory) {
 
@@ -108,6 +111,7 @@ contract Gear is ERC721 {
     uint id = gearCount;
     GearData storage gear = gearData[id];
     gear.modifierLength = modifiers.length;
+    gear.slot = slot;
     for(uint i = 0; i < modifiers.length; i++) {
       gear.modifierMap[i] = modifiers[i];
     }
@@ -133,6 +137,7 @@ contract Gear is ERC721 {
     tokenToGear[id] = gearDataId;
     totalSupply++;
     (Modifier[] memory modifiers, Slot slot) = readGearData(gearDataId);
+
     emit GearCreated(gearDataId, modifiers, slot);
   }
 
@@ -140,9 +145,11 @@ contract Gear is ERC721 {
     require(registry.lootBoxes(_lootBoxId), "LootBox hasn't been made official yet");
 
     uint randomNumber = uint(vrf.getRandomNumber()) % lootBoxes[_lootBoxId].rangeMax;
-    LootBoxItem[] memory items = lootBoxItems(_lootBoxId);
-    for(uint i = 0; i < items.length; i++) {
-      LootBoxItem memory item = items[i];
+
+    uint lootBoxLength = lootBoxes[_lootBoxId].itemLength;
+
+    for(uint i = 0; i < lootBoxLength; i++) {
+      LootBoxItem storage item = lootBoxes[_lootBoxId].items[i];
       if(randomNumber >= item.rangeStart && randomNumber <= item.rangeEnd) {
         _mintGear(item.id);
         emit LootBoxOpened(msg.sender, _lootBoxId, item.id);

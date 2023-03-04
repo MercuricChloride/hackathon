@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { Wizard, VRF, Registry, Barbarian } from "../typechain-types";
+import { Wizard, VRF, Registry, Barbarian, Gear } from "../typechain-types";
 
 describe("Dungeon Crawler", function () {
   // We define a fixture to reuse the same setup in every test.
@@ -9,19 +9,27 @@ describe("Dungeon Crawler", function () {
   let vrf: VRF;
   let registry: Registry;
   let barbarian: Barbarian;
-  //let gear: Gear;
+  let gear: Gear;
+
+  async function registryInit() {
+    await registry.addContract(wizard.address, 2);
+    await registry.addContract(barbarian.address, 2);
+    await registry.setGearContract(gear.address);
+  }
 
   before(async () => {
     const wizardFactory = await ethers.getContractFactory("Wizard");
     const barbarianFactory = await ethers.getContractFactory("Barbarian");
     const vrfFactory = await ethers.getContractFactory("VRF");
     const registryFactory = await ethers.getContractFactory("Registry");
-    //const gearFactory = await ethers.getContractFactory("Gear");
+    const gearFactory = await ethers.getContractFactory("Gear");
+
     vrf = (await vrfFactory.deploy()) as VRF;
     registry = (await registryFactory.deploy()) as Registry;
     wizard = (await wizardFactory.deploy("Wizard", "Wiz", registry.address, vrf.address)) as Wizard;
     barbarian = (await barbarianFactory.deploy("Barbarian", "Barb", registry.address, vrf.address)) as Barbarian;
-    //gear = (await gearFactory.deploy("Gear", "GEAR", registry.address, vrf.address)) as Gear;
+    gear = (await gearFactory.deploy("Gear", "GEAR", registry.address, vrf.address)) as Gear;
+
     await wizard.deployed();
   });
 
@@ -99,20 +107,48 @@ describe("Dungeon Crawler", function () {
     });
   });
 
-  //describe("Gear", function () {
-  //  //should allow a user to create a lootbox
-  //  it("Should allow a user to create a piece of gear", async function () {
-  //    const [owner] = await ethers.getSigners();
+  describe("Gear", function () {
+    before(async () => {
+      await registryInit();
+    });
 
-  //    const simpleModifer = {
-  //      stat: 1,
-  //      mod: 10,
-  //    };
-  //
-  //    const SimpleGear = {
-  //      slot: 1,
-  //      modifiers: [simpleModifer],
-  //    }
-  //  });
-  // });
+    it("Should allow a user to create a piece of gear", async function () {
+      const simpleModifer = {
+        stat: 1,
+        mod: 10,
+      };
+
+      await gear.createGearData([simpleModifer], 1);
+      console.log(await gear.readGearData(1));
+    });
+
+    // should allow a user to create a loot box
+    it("Should allow a user to create a loot box", async function () {
+      const simpleModifer = {
+        stat: 1,
+        mod: 10,
+      };
+
+      const anotherModifier = {
+        stat: 2,
+        mod: 5,
+      };
+
+      await gear.createGearData([simpleModifer, anotherModifier], 1);
+
+      const lootBox = {
+        id: 1,
+        rangeStart: 1,
+        rangeEnd: 1,
+      };
+
+      await gear.createLootBox([lootBox], 2);
+
+      //allow the loot box in the registry
+      await registry.addLootBox(0);
+
+      //mint a loot box
+      console.log(await gear.openLootBox(0));
+    });
+  });
 });

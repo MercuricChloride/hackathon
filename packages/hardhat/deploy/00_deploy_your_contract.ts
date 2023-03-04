@@ -37,7 +37,7 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
     autoMine: true,
   });
 
-  const gear = await deploy("Gear", {
+  await deploy("Gear", {
     from: deployer,
     log: true,
     autoMine: true,
@@ -59,9 +59,33 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
   });
 
   const registry = await hre.ethers.getContract("Registry", deployer);
+  const gear = await hre.ethers.getContract("Gear", deployer);
   await registry.addContract(wizard.address, 2);
   await registry.addContract(barbarian.address, 2);
   await registry.setGearContract(gear.address);
+
+  const simpleModifer = {
+    stat: 1,
+    mod: 10,
+  };
+
+  const anotherModifier = {
+    stat: 2,
+    mod: 5,
+  };
+
+  await gear.createGearData([simpleModifer, anotherModifier], 1);
+
+  const lootBox = {
+    id: 1,
+    rangeStart: 1,
+    rangeEnd: 1,
+  };
+
+  await gear.createLootBox([lootBox], 2);
+
+  //allow the loot box in the registry
+  await registry.addLootBox(0);
 
   // Get the deployed contract
   // const yourContract = await hre.ethers.getContract("YourContract", deployer);
