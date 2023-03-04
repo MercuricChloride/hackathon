@@ -20,6 +20,8 @@ interface IDungeon {
   }
 
   //@notice this function is used to play a dungeon
-  function playDungeon(Party memory party) external returns (uint256);
+  function playDungeon(Party memory party) external returns (uint256 dungeonId);
 
+  //@notice this function is used to finalise a dungeon, and penalize or reward the players
+  function finaliseDungeon(uint256 dungeonId) external;
 }

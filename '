@@ -1,152 +1,70 @@
-//SPDX-License-Identifier: MIT
-pragma solidity >=0.8.0 <0.9.0;
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "./Registry.sol";
-import "./interfaces/IGear.sol";
-
-//TODO:
-// Add support for gear from registry
-// calculate the gear bonus
-
-contract VRF {
- function getRandomNumber() public returns (uint256) {
-  return 1;
- }
-}
-
-contract PlayerSheet is ERC721 {
-
-  struct Stats {
-    uint8 constitution;
-    uint8 dexterity;
-    uint8 strength;
-    uint8 wisdom;
-    uint8 inteligence;
-    uint8 charisma;
-    uint8 luck;
-    uint8 level;
-    uint8 pointsToSpend;
-    uint256 xp;
-  }
-
-  struct Gear {
-    IGear gearContract;
-    uint tokenId;
-  }
-
-  VRF public vrf;
-  Registry public registry;
-
-  uint256 public totalSupply;
-
-  uint8 public constant STARTING_POINTS = 8;
-
-  mapping(uint256 tokenId => Stats) public playerStats;
-  mapping(uint256 tokenId => Gear[5]) public playerGear;
-
-  constructor(string memory _name, string memory _symbol, address _registry, address _vrf)ERC721(_name, _symbol){
-    registry = Registry(_registry);
-    vrf = VRF(_vrf);
-  }
-
-  function mint() public virtual {
-    //@todo add some payment here maybe?
-    //require(noStat for that tokenId)
-    totalSupply++;
-
-    uint tokenId = totalSupply;
-    uint8 pointsToSpend = uint8(vrf.getRandomNumber());
-
-    Stats memory stat = Stats(
-      STARTING_POINTS, //constitution,
-      STARTING_POINTS,// dexterity;
-      STARTING_POINTS,// strength;
-      STARTING_POINTS,// wisdom;
-      STARTING_POINTS,// inteligence;
-      STARTING_POINTS,// charisma;
-      STARTING_POINTS,// luck;
-      uint8(0), //level
-      uint8(pointsToSpend), // points to spend
-      0 // xp
-    );
-
-    // store the players stats for the tokenId
-    playerStats[tokenId] = stat;
-
-    // @todo add some logic here to create the player
-    _safeMint(msg.sender, tokenId);
-  }
-
-  function finalizePlayer(uint tokenId, Stats memory newStats) public {
-    Stats storage stats = playerStats[tokenId];
-
-    require(stats.pointsToSpend != 0, 'player already finalized');
-    require(stats.level == newStats.level, 'invalid level');
-    require(stats.xp == newStats.xp, 'invalid xp');
-
-    uint8 constitution = newStats.constitution;
-    uint8 dexterity = newStats.dexterity;
-    uint8 strength = newStats.strength;
-    uint8 wisdom = newStats.wisdom;
-    uint8 inteligence = newStats.inteligence;
-    uint8 charisma = newStats.charisma;
-    uint8 luck = newStats.luck;
-
-    uint8 pointTotal = (
-    constitution +
-    dexterity +
-    strength +
-    wisdom +
-    inteligence +
-    charisma +
-    luck);
-    uint8 pointsToSpend = stats.pointsToSpend;
-
-    require(pointsToSpend + 48 == pointTotal, 'invalid point distribution');
-
-    playerStats[tokenId] = newStats;
-  }
-
-  function levelUp(uint256 tokenId) public {
-    require(ownerOf(tokenId) == msg.sender, "You do not own this token");
-    // @todo add some payment here maybe?
-    // @todo add some logic here to level up the player
-  }
-
-  function equipGear(address gearAddress, uint256 tokenId) public {
-    require(registry.gear(gearAddress), "This is not a valid gear contract");
-  }
-
-  function getGearBonus(uint tokenId) public view returns (Stats memory) {
-    // get the player stats
-    Stats memory player = playerStats[tokenId];
-    // get all gear a player has
-    for(uint i; i<5; i++) {
-      Gear storage gear = playerGear[tokenId][i];
-      IGear.GearData storage gearData = gear.gearContract.gearData(gear.tokenId);
-      // loop over each gearModifier for each piece of gear, and add it to the player struct
-      for(uint j; j<gearData.modifiers.length; j++) {
-        IGear.Modifier storage mod = gearData.modifiers[j];
-        player = addModifierBonus(player, mod);
-      }
-    }
-    // then return the player struct
-    return player;
-  }
-
-  function addModifierBonus(Stats memory playerStat, IGear.Modifier memory mod) public pure returns(Stats memory) {
-    if(mod.stat == IGear.Stat.Constitution) {
-      playerStat.constitution += mod.mod;
-    }
-    return playerStat;
-  }
-
-  function getDamage(uint tokenId) public virtual view returns(uint8) {}
-
-  function getHealth(uint tokenId) public virtual view returns(uint8) {}
-
-  function healthPerLevel() public virtual pure returns(uint8) {}
-
-  function className() public virtual pure returns(string memory) {}
-
-}
+specVersion: 0.0.5
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: Registry
+    network: goerli
+    source:
+      address: "0x29AF00249f422D15193d22e7B2114A1b12871A9b"
+      abi: Registry
+      startBlock: 8593066
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - ContractAdded
+        - ContractRemoved
+        - OwnershipTransferred
+      abis:
+        - name: Registry
+          file: ./abis/Registry.json
+      eventHandlers:
+        - event: ContractAdded(address,uint8)
+          handler: handleContractAdded
+        - event: ContractRemoved(address,uint8)
+          handler: handleContractRemoved
+        - event: OwnershipTransferred(indexed address,indexed address)
+          handler: handleOwnershipTransferred
+      file: ./src/registry.ts
+templates:
+  - name: PlayerSheet
+    kind: ethereum/contract
+    network: goerli
+    source:
+      abi: PlayerSheet
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      file: ./src/playerSheet.ts
+      entities:
+        - Approval
+        - ApprovalForAll
+        - Transfer
+        - GearEquipped
+        - PlayerFinalized
+        - PlayerLeveledUp
+        - PlayerMinted
+        - Class
+      abis:
+        - name: PlayerSheet
+          file: ./abis/PlayerSheet.json
+      eventHandlers:
+        - event: Approval(indexed address,indexed address,indexed uint256)
+          handler: handleApproval
+        - event: ApprovalForAll(indexed address,indexed address,bool)
+          handler: handleApprovalForAll
+        - event: GearEquipped(uint256,address,uint256)
+          handler: handleGearEquipped
+        - event: PlayerFinalized(uint256,(uint8,uint8,uint8,uint8,uint8,uint8,uint8,uint8,uint8,uint256))
+          handler: handlePlayerFinalized
+        - event: PlayerLeveledUp(uint256,(uint8,uint8,uint8,uint8,uint8,uint8,uint8,uint8,uint8,uint256))
+          handler: handlePlayerLeveledUp
+        - event: PlayerMinted(uint256,(uint8,uint8,uint8,uint8,uint8,uint8,uint8,uint8,uint8,uint256))
+          handler: handlePlayerMinted
+        - event: Transfer(indexed address,indexed address,indexed uint256)
+          handler: handleTransfer
+        - event: ClassCreated(string name)
+          handler: handleClassCreated

@@ -1,13 +1,13 @@
 //SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
+
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "./Registry.sol";
 import "./interfaces/IGear.sol";
 import "./VRF.sol";
-
 //TODO:
-// Add support for gear from registry
-// calculate the gear bonus
+//Add support for gear from registry
+//calculate the gear bonus
 contract PlayerSheet is ERC721 {
 
   struct Stats {
@@ -38,9 +38,16 @@ contract PlayerSheet is ERC721 {
   mapping(uint256 tokenId => Stats) public playerStats;
   mapping(uint256 tokenId => Gear[5]) public playerGear;
 
+  event PlayerMinted(uint256 tokenId, Stats stats, address playerClass);
+  event PlayerFinalized(uint256 tokenId, Stats stats);
+  event PlayerLeveledUp(uint256 tokenId, Stats stats);
+  event GearEquipped(uint256 tokenId, IGear gearContract, uint gearTokenId);
+  event ClassCreated(string className, address classAddress);
+
   constructor(string memory _name, string memory _symbol, address _registry, address _vrf)ERC721(_name, _symbol){
     registry = Registry(_registry);
     vrf = VRF(_vrf);
+    emit ClassCreated(className(), address(this));
   }
 
   function mint() public {
@@ -49,7 +56,7 @@ contract PlayerSheet is ERC721 {
     totalSupply++;
 
     uint tokenId = totalSupply;
-    uint8 pointsToSpend = uint8(vrf.getRandomNumber());
+    uint8 pointsToSpend = (uint8(vrf.getRandomNumber()) % 10) + 20;
 
     Stats memory stat = Stats(
       STARTING_POINTS, //constitution,
@@ -67,6 +74,7 @@ contract PlayerSheet is ERC721 {
     // store the players stats for the tokenId
     playerStats[tokenId] = stat;
 
+    emit PlayerMinted(tokenId, stat, address(this));
     // @todo add some logic here to create the player
     _safeMint(msg.sender, tokenId);
   }
@@ -98,6 +106,7 @@ contract PlayerSheet is ERC721 {
 
     require(pointsToSpend + 48 == pointTotal, 'invalid point distribution');
 
+    emit PlayerFinalized(tokenId, newStats);
     playerStats[tokenId] = newStats;
   }
 
@@ -105,10 +114,12 @@ contract PlayerSheet is ERC721 {
     require(ownerOf(tokenId) == msg.sender, "You do not own this token");
     // @todo add some payment here maybe?
     // @todo add some logic here to level up the player
+    emit PlayerLeveledUp(tokenId, playerStats[tokenId]);
   }
 
   function equipGear(address gearAddress, uint256 tokenId) public {
     require(registry.gear(gearAddress), "This is not a valid gear contract");
+    emit GearEquipped(tokenId, IGear(gearAddress), tokenId);
   }
 
   function getGearBonus(uint tokenId) public view returns (Stats memory) {
@@ -143,5 +154,4 @@ contract PlayerSheet is ERC721 {
   function healthPerLevel() public virtual pure returns(uint8) {}
 
   function className() public virtual pure returns(string memory) {}
-
 }

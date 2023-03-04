@@ -38,5 +38,5 @@ interface IGear is IERC721 {
     Modifier[] modifiers;
   }
 
-  function gearData(uint tokenId) external view returns(GearData memory);
+  function gearData(uint tokenId) external view returns(GearData calldata);
 }

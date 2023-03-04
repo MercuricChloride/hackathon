@@ -15,7 +15,6 @@ contract Registry is Ownable {
     Gear
   }
 
-  //maybe this should be one event?
   event ContractAdded(address _address, AddType _type);
   event ContractRemoved(address _address, AddType _type);
 
