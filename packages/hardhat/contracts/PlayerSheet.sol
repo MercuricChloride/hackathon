@@ -5,8 +5,10 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "./Registry.sol";
 import "./VRF.sol";
 import "./Gear.sol";
-//TODO:
+import "hardhat/console.sol";
+
 //calculate the gear bonus
+
 contract PlayerSheet is ERC721 {
 
   struct Stats {
@@ -69,7 +71,6 @@ contract PlayerSheet is ERC721 {
     playerStats[tokenId] = stat;
 
     emit PlayerMinted(tokenId, stat, address(this), className());
-    // @todo add some logic here to create the player
     _safeMint(msg.sender, tokenId);
   }
 
@@ -77,6 +78,8 @@ contract PlayerSheet is ERC721 {
     Stats storage stats = playerStats[tokenId];
 
     require(stats.pointsToSpend != 0, 'player already finalized');
+    require(ownerOf(tokenId) == msg.sender, "You do not own this token");
+    require(newStats.pointsToSpend == 0, 'invalid points to spend');
     require(stats.level == newStats.level, 'invalid level');
     require(stats.xp == newStats.xp, 'invalid xp');
 
@@ -98,7 +101,7 @@ contract PlayerSheet is ERC721 {
     luck);
     uint8 pointsToSpend = stats.pointsToSpend;
 
-    require(pointsToSpend + 48 == pointTotal, 'invalid point distribution');
+    require(pointsToSpend + 56 == pointTotal, 'invalid point distribution');
 
     emit PlayerFinalized(tokenId, newStats);
     playerStats[tokenId] = newStats;
@@ -121,10 +124,8 @@ contract PlayerSheet is ERC721 {
     require(slot < 5, "Invalid slot");
     require(playerGear[playerTokenId][slot] == 0, "Slot already filled");
     (,Gear.Slot _slot) = Gear(registry.gearContract()).readGearData(gearTokenId);
-    require(
-      uint(_slot) == slot,
-      "Invalid slot for this gear"
-    );
+    require(uint(_slot) == slot,"Invalid slot for this gear");
+
     playerGear[playerTokenId][slot] = gearTokenId;
   }
 

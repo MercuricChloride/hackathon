@@ -5,6 +5,7 @@ pragma abicoder v2;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "./VRF.sol";
 import "./Registry.sol";
+import "hardhat/console.sol";
 
 // @note right now we don't have a way to tell what player owns what gear
 contract Gear is ERC721 {
@@ -71,6 +72,7 @@ contract Gear is ERC721 {
   event GearCreated(uint id, Modifier[] modifiers, Slot slot);
   event GearEquipped(uint tokenId, uint gearId);
   event GearUnequipped(uint tokenId, uint gearId);
+  event GearMinted(uint tokenId, uint gearId);
 
   event LootBoxCreated(uint id, LootBoxItem[] items, uint rangeMax);
   event LootBoxOpened(address user, uint lootBoxId, uint gearId);
@@ -108,6 +110,7 @@ contract Gear is ERC721 {
   }
 
   function createGearData(Modifier[] calldata modifiers, Slot slot) public {
+    gearCount++;
     uint id = gearCount;
     GearData storage gear = gearData[id];
     gear.modifierLength = modifiers.length;
@@ -115,10 +118,11 @@ contract Gear is ERC721 {
     for(uint i = 0; i < modifiers.length; i++) {
       gear.modifierMap[i] = modifiers[i];
     }
-    gearCount++;
+    emit GearCreated(id, modifiers, slot);
   }
 
   function createLootBox(LootBoxItem[] calldata items, uint rangeMax) public {
+    lootBoxCount++;
     uint id = lootBoxCount;
     LootBox storage box = lootBoxes[id];
     box.createdBy = msg.sender;
@@ -127,24 +131,22 @@ contract Gear is ERC721 {
       box.items[i] = items[i];
     }
     box.rangeMax = rangeMax;
-    lootBoxCount++;
     emit LootBoxCreated(id, items, rangeMax);
   }
 
-  function _mintGear(uint gearDataId) internal {
+  //@todo, make this internal again
+  function _mintGear(uint gearDataId) public {
     uint id = totalSupply;
     _safeMint(msg.sender, id);
     tokenToGear[id] = gearDataId;
     totalSupply++;
-    (Modifier[] memory modifiers, Slot slot) = readGearData(gearDataId);
-
-    emit GearCreated(gearDataId, modifiers, slot);
+    emit GearMinted(id, gearDataId);
   }
 
   function openLootBox(uint _lootBoxId) public {
     require(registry.lootBoxes(_lootBoxId), "LootBox hasn't been made official yet");
 
-    uint randomNumber = uint(vrf.getRandomNumber()) % lootBoxes[_lootBoxId].rangeMax;
+    uint randomNumber = vrf.getRandomNumber() % lootBoxes[_lootBoxId].rangeMax;
 
     uint lootBoxLength = lootBoxes[_lootBoxId].itemLength;
 
@@ -152,7 +154,7 @@ contract Gear is ERC721 {
       LootBoxItem storage item = lootBoxes[_lootBoxId].items[i];
       if(randomNumber >= item.rangeStart && randomNumber <= item.rangeEnd) {
         _mintGear(item.id);
-        emit LootBoxOpened(msg.sender, _lootBoxId, item.id);
+      emit LootBoxOpened(msg.sender, _lootBoxId, item.id);
       }
     }
   }

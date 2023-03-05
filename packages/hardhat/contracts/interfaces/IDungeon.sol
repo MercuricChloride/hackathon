@@ -5,12 +5,13 @@ import "../PlayerSheet.sol";
 interface IDungeon {
 
   struct Player {
-    PlayerSheet playerSheet; // @todo maybe update this to be an interface
+    PlayerSheet playerSheet;
     uint256 tokenId;
   }
 
   struct Party {
     Player[] players;
+    PlayMode mode;
   }
 
   enum PlayMode {
@@ -19,9 +20,13 @@ interface IDungeon {
     HardCore
   }
 
+  event DungeonPlayed(uint256 dungeonId);
+  event DungeonWon(uint256 dungeonId);
+  event DungeonLost(uint256 dungeonId);
+
   //@notice this function is used to play a dungeon
-  function playDungeon(Party memory party) external returns (uint256 dungeonId);
+  function playDungeon(Party memory party) external;
 
   //@notice this function is used to finalise a dungeon, and penalize or reward the players
-  function finaliseDungeon(uint256 dungeonId) external;
+  function finalizeDungeon(uint256 dungeonId) external;
 }
